@@ -2,14 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Science City Kolkata - AI Assistant</title>
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
         
         body {
@@ -18,51 +19,63 @@
             line-height: 1.6;
             min-height: 100vh;
             overflow: hidden;
+            touch-action: manipulation;
         }
         
         .chatbot-container {
             width: 100%;
             height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for mobile */
             background: white;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
         }
         
         .chatbot-header {
             background: linear-gradient(135deg, #4a69bd 0%, #1e3799 100%);
             color: white;
-            padding: 20px;
+            padding: 16px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-height: 60px;
+            position: relative;
+            z-index: 10;
         }
         
         .chatbot-header h1 {
             margin: 0;
-            font-size: 24px;
+            font-size: 20px;
             display: flex;
             align-items: center;
             gap: 10px;
+            font-weight: 600;
         }
         
         .chatbot-messages {
             flex: 1;
-            padding: 20px;
+            padding: 16px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
             background: #f8f9fa;
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
         }
         
         .message {
-            max-width: 80%;
-            padding: 12px 18px;
+            max-width: 85%;
+            padding: 12px 16px;
             border-radius: 18px;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
             animation: fadeIn 0.3s ease;
+            line-height: 1.4;
+            word-wrap: break-word;
         }
         
         .user-message {
@@ -105,20 +118,24 @@
             animation-delay: 0.4s;
         }
         
-        .chatbot-input {
-            display: flex;
-            padding: 20px;
+        .chatbot-input-container {
+            padding: 12px 16px;
             border-top: 1px solid #eee;
             background: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         #chatbot-input-field {
             flex: 1;
-            padding: 12px 18px;
+            padding: 12px 16px;
             border: 1px solid #ddd;
-            border-radius: 25px;
+            border-radius: 24px;
             outline: none;
             font-size: 16px;
+            min-height: 48px;
+            -webkit-appearance: none; /* Remove iOS shadow */
         }
         
         #chatbot-input-field:focus {
@@ -130,15 +147,16 @@
             background: #4a69bd;
             color: white;
             border: none;
-            border-radius: 25px;
-            padding: 12px 20px;
-            margin-left: 10px;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 18px;
             transition: background 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
         
         #chatbot-send-btn:hover {
@@ -156,34 +174,20 @@
             50% { transform: translateY(-5px); }
         }
         
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .chatbot-header h1 {
-                font-size: 20px;
-            }
-            
-            .chatbot-input {
-                padding: 15px;
-            }
-            
-            #chatbot-input-field {
-                padding: 10px 15px;
-                font-size: 14px;
-            }
-            
-            #chatbot-send-btn {
-                padding: 10px 15px;
-                font-size: 14px;
-            }
-        }
-        
         .suggested-questions {
             display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 0 20px 15px;
+            flex-wrap: nowrap;
+            gap: 8px;
+            padding: 12px 16px;
             background: #f8f9fa;
             border-bottom: 1px solid #eee;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
+        }
+        
+        .suggested-questions::-webkit-scrollbar {
+            display: none; /* Chrome, Safari */
         }
         
         .suggestion-btn {
@@ -191,15 +195,94 @@
             color: #4a69bd;
             border: 1px solid #4a69bd;
             border-radius: 20px;
-            padding: 8px 15px;
+            padding: 8px 14px;
             cursor: pointer;
             font-size: 14px;
             transition: all 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         
-        .suggestion-btn:hover {
+        .suggestion-btn:active {
             background: #4a69bd;
             color: white;
+        }
+        
+        /* Mobile-specific styles */
+        @media (max-width: 480px) {
+            .chatbot-header {
+                padding: 14px 16px;
+            }
+            
+            .chatbot-header h1 {
+                font-size: 18px;
+            }
+            
+            .chatbot-messages {
+                padding: 12px;
+            }
+            
+            .message {
+                max-width: 90%;
+                padding: 10px 14px;
+                font-size: 15px;
+            }
+            
+            .chatbot-input-container {
+                padding: 10px 12px;
+            }
+            
+            #chatbot-input-field {
+                padding: 10px 14px;
+                font-size: 16px; /* Prevents zoom on iOS */
+                min-height: 44px;
+            }
+            
+            #chatbot-send-btn {
+                width: 44px;
+                height: 44px;
+            }
+            
+            .suggested-questions {
+                padding: 10px 12px;
+            }
+            
+            .suggestion-btn {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+        }
+        
+        /* Very small devices */
+        @media (max-width: 350px) {
+            .chatbot-header h1 {
+                font-size: 16px;
+            }
+            
+            .message {
+                font-size: 14px;
+            }
+            
+            .suggestion-btn {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+        }
+        
+        /* Prevent text selection on interactive elements */
+        .suggestion-btn, #chatbot-send-btn {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        /* Improve scrollbar for WebKit browsers */
+        .chatbot-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chatbot-messages::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
         }
     </style>
 </head>
@@ -215,6 +298,8 @@
             <button class="suggestion-btn" onclick="setQuestion('What are the ticket prices?')">Ticket Prices</button>
             <button class="suggestion-btn" onclick="setQuestion('Where is the space theater?')">Space Theater</button>
             <button class="suggestion-btn" onclick="setQuestion('Is there parking available?')">Parking Info</button>
+            <button class="suggestion-btn" onclick="setQuestion('What are the main attractions?')">Attractions</button>
+            <button class="suggestion-btn" onclick="setQuestion('How do I get there?')">Directions</button>
         </div>
         
         <div class="chatbot-messages">
@@ -226,9 +311,14 @@
                 </div>
             </div>
         </div>
-        <div class="chatbot-input">
-            <input type="text" placeholder="Ask about Science City Kolkata..." id="chatbot-input-field">
-            <button id="chatbot-send-btn">Send</button>
+        
+        <div class="chatbot-input-container">
+            <input type="text" placeholder="Ask about Science City..." id="chatbot-input-field" enterkeyhint="send">
+            <button id="chatbot-send-btn" aria-label="Send message">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2 21L23 12L2 3V10L17 12L2 14V21Z" fill="white"/>
+                </svg>
+            </button>
         </div>
     </div>
 
@@ -328,6 +418,11 @@
                 removeTypingIndicator();
                 addMessage("Hello! I'm your Science City Kolkata assistant. I can help you with information about opening hours, ticket prices, attractions, and more. How can I help you today?");
             }, 1000);
+            
+            // Focus input field on load for better mobile UX
+            setTimeout(() => {
+                inputField.focus();
+            }, 1500);
         });
     </script>
 </body>
