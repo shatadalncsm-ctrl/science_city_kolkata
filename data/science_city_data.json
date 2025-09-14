@@ -13,24 +13,24 @@
   "attractions": {
     "space_odyssey": {
       "name": "Space Odyssey",
-      "description": "India's first large format theater with shows about space and astronomy",
+      "description": "India's first large format theater with shows about space and astronomy. Now upgraded to a Fulldome 3D Digital Theatre with a 23-meter tilted dome.",
       "show_times": ["11:00 AM", "1:00 PM", "3:00 PM", "5:00 PM"]
     },
     "dynamotion": {
       "name": "Dynamotion Hall",
-      "description": "Hall with interactive exhibits demonstrating scientific principles"
+      "description": "Interactive hall with exhibits on illusions, motion, visual perception, energy, mechanics and other scientific principles."
     },
     "evolution_park": {
       "name": "Evolution Theme Park",
-      "description": "Outdoor park tracing the story of evolution from big bang to modern humans"
+      "description": "Outdoor park tracing the story of evolution from big bang to modern humans with life-size animal models."
     },
     "maritime_center": {
       "name": "Maritime Center",
-      "description": "Exhibits showcasing India's maritime heritage and technology"
+      "description": "Exhibits showcasing India's maritime heritage, shipping technology and oceanographic research."
     },
     "earth_exploration": {
       "name": "Earth Exploration Hall",
-      "description": "Exhibits focused on earth sciences, geology, and natural phenomena"
+      "description": "Two-storied hemispherical hall featuring exhibits on geography, climate, flora, fauna, and natural phenomena from different regions of the world."
     },
     "Evolution of Life – A Dark Ride": {
       "name": "Evolution of Life – A Dark Ride",
@@ -59,29 +59,42 @@
     "Science on a Sphere": {
       "name": "Science on a Sphere",
       "price_general": "₹40.00",
-      "price_school_group": "₹20.00"
+      "price_school_group": "₹20.00",
+      "description": "A 1.8 m diameter sphere with global datasets projected to show earth science, climate and astronomy phenomena."
     }
   },
   "facilities": {
     "parking": "Ample parking is available for both cars and buses, with space for over 500 cars. The parking area is well-marked and easily accessible from the main entrance.",
     "combo_offers": "Various combo offers are available for different attractions and groups, allowing for a more cost-effective visit. These can often be purchased on-site or online.",
-    "food_and_beverages": "Multiple food courts and snack bars are strategically located throughout the park, offering a variety of cuisines, including vegetarian and non-vegetarian options. There are also designated spaces for scientific exhibitions and lounges.",
-    "restrooms_and_first_aid": "Clean and well-maintained restrooms are conveniently located throughout the complex. First-aid stations and on-site medical services are available for emergencies, with security personnel and CCTV cameras for visitor safety.",
-    "accessibility": "Science City is wheelchair accessible with ramps and elevators available for visitors with mobility issues. Wheelchairs can be rented at the entrance. Braille signage is also available to assist visually impaired visitors."
+    "food_and_beverages": "Multiple food courts and snack bars are strategically located throughout the park, offering a variety of cuisines, including vegetarian and non-vegetarian options.",
+    "restrooms_and_first_aid": "Clean and well-maintained restrooms are conveniently located throughout the complex. First-aid stations and on-site medical services are available for emergencies.",
+    "accessibility": "Science City is wheelchair accessible with ramps and elevators. Wheelchairs can be rented at the entrance. Braille signage is available for visually impaired visitors.",
+    "guide_map": "Available at the entrance and on the official website to help navigate the campus."
   },
   "additional_info": {
     "acreage": "49.6 acres",
     "operator": "National Council of Science Museums (NCSM), Ministry of Culture, Government of India",
-    "opening_date": "1 July 1997 (Science Centre & Park) / Convention Centre from 21 December 1996",
-    "footfall": "Over 29.90 million since launch",
+    "opening_date": "1 July 1997 (Science Centre & Park), Convention Centre from 21 December 1996",
+    "footfall": "Over 29.90 million visitors since opening (approx. 3.3 crore in 25 years)",
     "convention_centre": {
       "main_auditorium_capacity": 2232,
       "mini_auditorium_capacity": 392,
-      "seminar_halls": "11 halls ranging from 15 to 100 seating capacity",
+      "seminar_halls_capacity": "524 seats across 11 seminar halls (15–100 each)",
       "exhibition_ground_size": {
         "indoor": "270 sq. m",
         "open_air": "20000 sq. m"
-      }
+      },
+      "booking_policy": "Facilities available to scientific, cultural and professional organisations. Not available for private/social functions like weddings or birthdays."
+    },
+    "tariff_and_terms": {
+      "main_auditorium_non_commercial": "₹60,000 for 6 hours (Mon-Fri), higher on weekends/holidays",
+      "cancellation_policy": "Refunds vary depending on notice period before the event.",
+      "general_conditions": [
+        "Advance deposit required.",
+        "Damage compensation applies.",
+        "Cleaning charges apply.",
+        "Event organisers must comply with safety regulations and capacity limits."
+      ]
     },
     "climate_change_gallery": {
       "name": "On the Edge?",
@@ -96,18 +109,19 @@
         "12ft × 24ft interactive LED screen",
         "Holographic displays",
         "Gamified experiences",
-        "Interactive wall for reducing greenhouse gas emissions"
+        "Interactive wall for reducing greenhouse gas emissions",
+        "Carbon footprint calculator"
       ]
     },
     "contact": {
       "phone": ["(033) 2285 4343", "(033) 2285 1572", "(033) 2285 2607"],
       "email": "sciencecity.kol@ncsm.gov.in",
-      "website": "sciencecitykolkata.org.in"
+      "website": "https://sciencecitykolkata.org.in"
     },
     "convention_centre_office_contact": {
       "email": "conventioncentrekolkata@gmail.com",
       "mobile": "+91 8100140998",
-      "office_hours": "Monday to Saturday between 9:30 AM to 6:00 PM"
+      "office_hours": "Monday to Saturday, 9:30 AM – 6:00 PM"
     },
     "director": {
       "name": "Shri Pramod Grover",
@@ -131,5 +145,33 @@
         "designation": "Curator ‘D’"
       }
     ]
+  },
+  "how_to_reach": {
+    "nearest_airport": {
+      "name": "Netaji Subhas Chandra Bose International Airport (CCU)",
+      "distance": "≈ 15 km",
+      "travel_time": "35–45 minutes by taxi"
+    },
+    "nearest_railway_station": {
+      "name": "Sealdah Railway Station",
+      "distance": "≈ 5 km",
+      "travel_time": "15–20 minutes by car/auto"
+    },
+    "nearest_metro": {
+      "name": "Sealdah Metro (East-West Line)",
+      "distance": "≈ 4 km",
+      "travel_time": "10–15 minutes by cab/auto"
+    },
+    "nearest_bus_stand": {
+      "name": "Science City Bus Stop",
+      "routes": "Connected by multiple WBTC and private buses via EM Bypass"
+    },
+    "by_car": "Located directly on EM Bypass, accessible from Park Circus, Ruby, and Salt Lake. Parking for 500+ vehicles available.",
+    "app_cabs": "Ola, Uber, and other app-based taxis drop at the main entrance.",
+    "gps_coordinates": {
+      "latitude": "22.5395",
+      "longitude": "88.3953"
+    },
+    "google_maps_link": "https://maps.app.goo.gl/SeE2g5jAgY2g3wTo8"
   }
 }
