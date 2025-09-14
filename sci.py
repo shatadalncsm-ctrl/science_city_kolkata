@@ -55,6 +55,29 @@ def is_science_related(question):
     question_lower = question.lower()
     return any(keyword in question_lower for keyword in science_keywords)
 
+def is_science_city_question(question):
+    """Check if the question is about Science City"""
+    science_city_keywords = [
+        'science city', 'kolkata', 'opening', 'hour', 'time', 'ticket', 'price',
+        'cost', 'fee', 'attraction', 'exhibit', 'show', 'theater', 'parking',
+        'location', 'address', 'how to reach', 'direction', 'facility', 'amenity',
+        'restaurant', 'food', 'cafe', 'shop', 'store', 'gift', 'souvenir',
+        'closing', 'when close', 'when open', 'timing', 'schedule'
+    ]
+    
+    question_lower = question.lower()
+    return any(keyword in question_lower for keyword in science_city_keywords)
+
+def is_trip_planning_question(question):
+    """Check if the question is related to trip planning"""
+    trip_keywords = [
+        'plan', 'itinerary', 'visit', 'schedule', 'tour', 'what to see',
+        'where to go', 'recommend', 'suggest', 'best', 'must see'
+    ]
+    
+    question_lower = question.lower()
+    return any(keyword in question_lower for keyword in trip_keywords)
+
 def ask_gemini(prompt: str, model="gemini-2.0-flash"):
     """Send prompt to Gemini"""
     if not client:
@@ -126,18 +149,7 @@ def get_science_city_answer(question):
     SCIENCE_CITY_DATA = load_science_city_data()
     science_city_context = json.dumps(SCIENCE_CITY_DATA, indent=2)
     
-    # Check if question is specifically about Science City Kolkata
-    science_city_keywords = [
-        'science city', 'kolkata', 'opening', 'hour', 'time', 'ticket', 'price',
-        'cost', 'fee', 'attraction', 'exhibit', 'show', 'theater', 'parking',
-        'location', 'address', 'how to reach', 'direction', 'facility', 'amenity',
-        'restaurant', 'food', 'cafe', 'shop', 'store', 'gift', 'souvenir'
-    ]
-    
-    question_lower = question.lower()
-    is_science_city_question = any(keyword in question_lower for keyword in science_city_keywords)
-    
-    if is_science_city_question:
+    if is_science_city_question(question):
         # Answer based on Science City data
         prompt = f"""
         You are a knowledgeable guide at Science City Kolkata. 
@@ -183,10 +195,15 @@ def get_science_city_answer(question):
 @app.route('/')
 def index():
     """Render the chatbot page."""
-    # Initialize session
+    # Initialize session only if it doesn't exist or is new
     session.permanent = True
-    session['conversation_state'] = 'welcome'
-    session['user_data'] = {}
+    if 'conversation_state' not in session:
+        session['conversation_state'] = 'welcome'
+        session['user_data'] = {}
+        session['first_visit'] = True  # Flag to track first visit
+    else:
+        session['first_visit'] = False  # Not first visit
+    
     return render_template('index.html')
 
 @app.route('/ask', methods=['POST'])
@@ -196,9 +213,28 @@ def ask_question():
     question = data.get('question', '')
     current_state = session.get('conversation_state', 'welcome')
     user_data = session.get('user_data', {})
+    first_visit = session.get('first_visit', True)
     
     if not question:
         return jsonify({'error': 'No question provided'})
+    
+    # Check if this is the first interaction after welcome
+    if first_visit and current_state == 'welcome' and question.strip():
+        session['first_visit'] = False
+        current_state = 'main_menu'
+        session['conversation_state'] = 'main_menu'
+    
+    # Check if user wants to exit trip planning and ask a different question
+    planning_states = ['asking_interests', 'asking_time', 'asking_start_time', 'asking_kids', 'asking_meals']
+    
+    if current_state in planning_states:
+        # If user asks a Science City or general question while in planning mode
+        if is_science_city_question(question) or is_science_related(question):
+            # Exit planning mode and answer the question
+            session['conversation_state'] = 'main_menu'
+            response = get_science_city_answer(question)
+            response += "\n\nIf you'd like to continue planning your trip, just ask to 'plan my visit' again!"
+            return jsonify({'answer': response, 'state': 'main_menu'})
     
     # Handle conversation flow
     if current_state == 'welcome':
@@ -218,7 +254,7 @@ def ask_question():
     
     elif current_state == 'main_menu':
         # Check if user wants to plan their trip
-        if any(word in question.lower() for word in ['plan', 'itinerary', 'visit', '1', 'one', '🗓️']):
+        if is_trip_planning_question(question):
             session['conversation_state'] = 'asking_interests'
             response = "Great! Let's plan your visit. What are your main interests? (e.g., space, biology, technology, evolution)"
         else:
@@ -274,11 +310,19 @@ def start_trip_planning():
     session['user_data'] = {}
     return jsonify({'answer': "Great! Let's plan your visit. What are your main interests? (e.g., space, biology, technology, evolution)", 'state': 'asking_interests'})
 
+@app.route('/cancel_plan', methods=['POST'])
+def cancel_trip_planning():
+    """Cancel the trip planning process"""
+    session['conversation_state'] = 'main_menu'
+    session['user_data'] = {}
+    return jsonify({'answer': "Trip planning cancelled. How else can I help you today?", 'state': 'main_menu'})
+
 @app.route('/reset', methods=['POST'])
 def reset_conversation():
     """Reset the conversation state"""
     session['conversation_state'] = 'welcome'
     session['user_data'] = {}
+    session['first_visit'] = True
     return jsonify({'status': 'reset'})
 
 @app.route('/status')
@@ -287,7 +331,8 @@ def api_status():
     status = {
         'status': 'active' if client else 'inactive',
         'service': 'Science City Kolkata Assistant',
-        'conversation_state': session.get('conversation_state', 'welcome')
+        'conversation_state': session.get('conversation_state', 'welcome'),
+        'first_visit': session.get('first_visit', True)
     }
     return jsonify(status)
 
