@@ -12,61 +12,76 @@ client = genai.Client(api_key="AIzaSyC8Jpsr36NM-YEQjLR9sIg3-EYaCskLQJs")
 
 # Science City Kolkata data
 SCIENCE_CITY_DATA = {
-    "name": "Science City Kolkata",
-    "location": "Kolkata, West Bengal, India",
-    "hours": {
-        "Tuesday-Sunday": "9:00 AM - 8:00 PM",
-        "Monday": "Closed"
-    },
-    "ticket_prices": {
-        "Adults": "₹60",
-        "Children (below 5 years)": "Free",
-        "Students": "₹50",
-        "Seniors (60+)": "₹50",
-        "Space Theater": "₹50 additional"
-    },
-    "facilities": {
-        "restrooms": {
-            "main_building": "Near the main entrance",
-            "science_park": "Next to the evolution park"
-        },
-        "cafe": {
-            "location": "Ground floor, near space theater",
-            "hours": "10:00 AM - 7:00 PM"
-        },
-        "gift_shop": {
-            "location": "Ground floor, near exit",
-            "hours": "9:30 AM - 7:30 PM"
-        },
-        "parking": {
-            "location": "Main entrance area",
-            "capacity": "200 cars",
-            "fee": "₹30 for 4 hours"
-        }
-    },
-    "attractions": {
-        "space_odyssey": {
-            "name": "Space Odyssey",
-            "description": "India's first large format theater with shows about space and astronomy",
-            "show_times": ["11:00 AM", "1:00 PM", "3:00 PM", "5:00 PM"]
-        },
-        "dynamotion": {
-            "name": "Dynamotion",
-            "description": "Hall with interactive exhibits demonstrating scientific principles"
-        },
-        "evolution_park": {
-            "name": "Evolution Theme Park",
-            "description": "Outdoor park tracing the story of evolution from big bang to modern humans"
-        },
-        "maritime_center": {
-            "name": "Maritime Center",
-            "description": "Exhibits showcasing India's maritime heritage and technology"
-        },
-        "earth_exploration": {
-            "name": "Earth Exploration Hall",
-            "description": "Exhibits focused on earth sciences, geology, and natural phenomena"
-        }
-    }
+"name": "Science City Kolkata",
+"location": "J.B.S Haldane Avenue, Mirania Gardens, East Topsia, Topsia, Kolkata, West Bengal, 700046, India",
+"hours": {
+"Everyday": "10:00 AM - 7:00 PM"
+},
+"ticket_prices": {
+"Entry Fee (General)": "₹70.00",
+"Entry Fee (Organized Group, min 25)": "₹60.00",
+"Entry Fee (Organized School Groups)": "₹35.00",
+"Entry Fee (Underprivileged Groups)": "₹5.00"
+},
+"attractions": {
+"space_odyssey": {
+"name": "Space Odyssey",
+"description": "India's first large format theater with shows about space and astronomy",
+"show_times": ["11:00 AM", "1:00 PM", "3:00 PM", "5:00 PM"]
+},
+"dynamotion": {
+"name": "Dynamotion Hall",
+"description": "Hall with interactive exhibits demonstrating scientific principles"
+},
+"evolution_park": {
+"name": "Evolution Theme Park",
+"description": "Outdoor park tracing the story of evolution from big bang to modern humans"
+},
+"maritime_center": {
+"name": "Maritime Center",
+"description": "Exhibits showcasing India's maritime heritage and technology"
+},
+"earth_exploration": {
+"name": "Earth Exploration Hall",
+"description": "Exhibits focused on earth sciences, geology, and natural phenomena"
+},
+"Evolution of Life – A Dark Ride": {
+"name": "Evolution of Life – A Dark Ride",
+"price_general": "₹50.00",
+"price_school_group": "₹25.00"
+},
+"Panorama on 'Human Evolution'": {
+"name": "Panorama on 'Human Evolution'",
+"price_general": "₹60.00",
+"price_school_group": "₹30.00"
+},
+"Time Machine": {
+"name": "Time Machine",
+"price_general": "₹50.00"
+},
+"Road Train": {
+"name": "Road Train",
+"price_general": "₹30.00"
+},
+"Cable Car": {
+"name": "Cable Car",
+"price_general": "₹75.00",
+"price_group": "₹60.00",
+"price_school_group": "₹40.00"
+},
+"Science on a Sphere": {
+"name": "Science on a Sphere",
+"price_general": "₹40.00",
+"price_school_group": "₹20.00"
+}
+},
+"facilities": {
+"parking": "Ample parking is available for both cars and buses, with space for over 500 cars. The parking area is well-marked and easily accessible from the main entrance.",
+"combo_offers": "Various combo offers are available for different attractions and groups, allowing for a more cost-effective visit. These can often be purchased on-site or online.",
+"food_and_beverages": "Multiple food courts and snack bars are strategically located throughout the park, offering a variety of cuisines, including vegetarian and non-vegetarian options. There are also designated spaces for scientific exhibitions and lounges.",
+"restrooms_and_first_aid": "Clean and well-maintained restrooms are conveniently located throughout the complex. First-aid stations and on-site medical services are available for emergencies, with security personnel and CCTV cameras for visitor safety.",
+"accessibility": "Science City is wheelchair accessible with ramps and elevators available for visitors with mobility issues. Wheelchairs can be rented at the entrance. Braille signage is also available to assist visually impaired visitors."
+}
 }
 
 def ask_gemini(prompt: str, model="gemini-2.0-flash"):
