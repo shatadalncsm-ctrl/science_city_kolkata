@@ -228,13 +228,26 @@ def ask_question():
     planning_states = ['asking_interests', 'asking_time', 'asking_start_time', 'asking_kids', 'asking_meals']
     
     if current_state in planning_states:
-        # If user asks a Science City or general question while in planning mode
-        if is_science_city_question(question) or is_science_related(question):
-            # Exit planning mode and answer the question
+        # Check if user wants to exit planning with a specific command
+        exit_commands = ['exit', 'cancel', 'stop', 'quit', 'never mind', 'go back']
+        if any(cmd in question.lower() for cmd in exit_commands):
             session['conversation_state'] = 'main_menu'
-            response = get_science_city_answer(question)
-            response += "\n\nIf you'd like to continue planning your trip, just ask to 'plan my visit' again!"
+            response = "Trip planning cancelled. How else can I help you today?"
             return jsonify({'answer': response, 'state': 'main_menu'})
+        
+        # If user asks a Science City or general question while in planning mode
+        elif is_science_city_question(question) or is_science_related(question):
+            # Only exit if it's clearly not an answer to our current question
+            # For asking_interests state, accept science-related answers
+            if current_state == 'asking_interests' and is_science_related(question):
+                # This is a valid answer to the interests question, continue with planning
+                pass
+            else:
+                # Exit planning mode and answer the question
+                session['conversation_state'] = 'main_menu'
+                response = get_science_city_answer(question)
+                response += "\n\nIf you'd like to continue planning your trip, just ask to 'plan my visit' again!"
+                return jsonify({'answer': response, 'state': 'main_menu'})
     
     # Handle conversation flow
     if current_state == 'welcome':
