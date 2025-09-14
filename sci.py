@@ -105,10 +105,20 @@ def generate_visit_plan(user_data):
     4. Estimated time spent at each location
     5. Any special recommendations based on their interests
     
+    IMPORTANT FORMATTING INSTRUCTIONS:
+    - Use plain text only, NO markdown formatting (no **, *, _, etc.)
+    - Use simple line breaks and indentation for readability
+    - Use emojis sparingly for visual appeal
+    - Keep the response clean and easy to read
+    
     Make the plan engaging and practical, considering their time constraints.
     """
     
     plan = ask_gemini(prompt)
+    # Clean up any remaining markdown that might slip through
+    plan = re.sub(r'\*\*(.*?)\*\*', r'\1', plan)  # Remove bold
+    plan = re.sub(r'\*(.*?)\*', r'\1', plan)      # Remove italics
+    plan = re.sub(r'_(.*?)_', r'\1', plan)        # Remove underline
     return plan
 
 def get_science_city_answer(question):
@@ -143,6 +153,7 @@ def get_science_city_answer(question):
         2. Provide specific location details if applicable
         3. If information is not available, say "I don't have that information"
         4. Keep response under 3 sentences
+        5. Use plain text only, NO markdown formatting
         """
     elif is_science_related(question):
         # Answer general science questions
@@ -156,12 +167,17 @@ def get_science_city_answer(question):
         2. Explain concepts clearly and simply
         3. Keep response concise but informative
         4. If you don't know the answer, say so
+        5. Use plain text only, NO markdown formatting
         """
     else:
         # For non-science questions
         return "I'm specialized in Science City Kolkata and general science topics. I'd be happy to help with questions about Science City, its exhibits, or any science-related topics!"
     
     answer = ask_gemini(prompt)
+    # Clean up any markdown that might slip through
+    answer = re.sub(r'\*\*(.*?)\*\*', r'\1', answer)  # Remove bold
+    answer = re.sub(r'\*(.*?)\*', r'\1', answer)      # Remove italics
+    answer = re.sub(r'_(.*?)_', r'\1', answer)        # Remove underline
     return answer
 
 @app.route('/')
@@ -191,7 +207,7 @@ def ask_question():
         opening_hours = SCIENCE_CITY_DATA.get('hours', {}).get('Everyday', '10:00 AM - 7:00 PM')
         
         response = "🔬 Welcome to Science City Kolkata! 🔬\n\n"
-        response += f"🕐 **Opening Hours:** {opening_hours}\n\n"
+        response += f"🕐 Opening Hours: {opening_hours}\n\n"
         response += "I can help you with:\n"
         response += "1. 🗓️ Plan your visit (create personalized itinerary)\n"
         response += "2. ℹ️ General information about attractions\n"
