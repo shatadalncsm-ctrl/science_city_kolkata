@@ -1,43 +1,25 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 from google import genai
 from google.api_core import exceptions
 import json
 import os
 import re
+from datetime import datetime
 
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'
+app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 hour session timeout
 
-# Load API keys from JSON file
-def load_api_keys():
-    try:
-        with open('config/keys.json', 'r', encoding='utf-8') as f:
-            config = json.load(f)
-            return config.get('gemini_api_keys', [])
-    except (FileNotFoundError, json.JSONDecodeError) as e:
-        print(f"Error loading API keys: {e}")
-        # Fallback to environment variable or single key
-        fallback_key = os.environ.get('GEMINI_API_KEY')
-        if fallback_key:
-            return [fallback_key]
-        return ["AIzaSyC8Jpsr36NM-YEQjLR9sIg3-EYaCskLQJs"]  # Default fallback
+# Fixed API key - replace with your actual key
+GEMINI_API_KEY = "AIzaSyC8Jpsr36NM-YEQjLR9sIg3-EYaCskLQJs"
 
-# Load API keys
-GEMINI_API_KEYS = load_api_keys()
-
-# Track current API key index and usage
-current_key_index = 0
-key_usage_count = {key: 0 for key in GEMINI_API_KEYS}
-key_error_count = {key: 0 for key in GEMINI_API_KEYS}
-MAX_ERRORS_PER_KEY = 5  # Switch key after this many errors
-MAX_REQUESTS_PER_KEY = 1000  # Approximate limit before potential quota issues
-
-# Initialize Gemini API client with first key
-if GEMINI_API_KEYS:
-    client = genai.Client(api_key=GEMINI_API_KEYS[current_key_index])
-else:
-    raise ValueError("No API keys available. Please check your config/keys.json file.")
+# Initialize Gemini API client
+try:
+    client = genai.Client(api_key=GEMINI_API_KEY)
+except Exception as e:
+    print(f"Error initializing Gemini client: {e}")
+    client = None
 
 # Load Science City data from external JSON file
 def load_science_city_data():
@@ -55,21 +37,6 @@ def load_science_city_data():
                 "Entry Fee (Organized School Groups)": "₹35.00"
             }
         }
-
-def rotate_api_key():
-    """Switch to the next available API key"""
-    global current_key_index, client
-    
-    if len(GEMINI_API_KEYS) <= 1:
-        return GEMINI_API_KEYS[0]  # Only one key available
-    
-    current_key_index = (current_key_index + 1) % len(GEMINI_API_KEYS)
-    new_key = GEMINI_API_KEYS[current_key_index]
-    
-    print(f"Switching to API key index {current_key_index}")
-    client = genai.Client(api_key=new_key)
-    
-    return new_key
 
 def is_science_related(question):
     """Check if the question is related to science"""
@@ -89,58 +56,60 @@ def is_science_related(question):
     return any(keyword in question_lower for keyword in science_keywords)
 
 def ask_gemini(prompt: str, model="gemini-2.0-flash"):
-    """Send prompt to Gemini with API key fallback"""
-    global current_key_index, key_usage_count, key_error_count
-    
-    if not GEMINI_API_KEYS:
-        return "API configuration error. Please contact support."
-    
-    current_key = GEMINI_API_KEYS[current_key_index]
-    key_usage_count[current_key] = key_usage_count.get(current_key, 0) + 1
-    
-    # Rotate key if we've hit the request limit
-    if key_usage_count[current_key] >= MAX_REQUESTS_PER_KEY and len(GEMINI_API_KEYS) > 1:
-        print(f"Key {current_key_index} reached request limit, rotating...")
-        rotate_api_key()
-        current_key = GEMINI_API_KEYS[current_key_index]
+    """Send prompt to Gemini"""
+    if not client:
+        return "Service is currently unavailable. Please try again later."
     
     try:
         response = client.models.generate_content(model=model, contents=prompt)
         return response.text
         
     except exceptions.ResourceExhausted as e:
-        print(f"Quota exceeded for key {current_key_index}: {e}")
-        key_error_count[current_key] = key_error_count.get(current_key, 0) + 1
-        
-        if key_error_count[current_key] >= MAX_ERRORS_PER_KEY and len(GEMINI_API_KEYS) > 1:
-            print(f"Key {current_key_index} has too many errors, rotating...")
-            rotate_api_key()
-            
+        print(f"Quota exceeded: {e}")
         return "I'm currently experiencing high demand. Please try again in a moment."
         
     except exceptions.PermissionDenied as e:
-        print(f"Permission denied for key {current_key_index}: {e}")
-        key_error_count[current_key] = key_error_count.get(current_key, 0) + 1
-        
-        if key_error_count[current_key] >= MAX_ERRORS_PER_KEY and len(GEMINI_API_KEYS) > 1:
-            print(f"Key {current_key_index} has permission issues, rotating...")
-            rotate_api_key()
-            
+        print(f"Permission denied: {e}")
         return "Service temporarily unavailable. Please try again shortly."
         
     except exceptions.InvalidArgument as e:
-        print(f"Invalid API key {current_key_index}: {e}")
-        key_error_count[current_key] = key_error_count.get(current_key, 0) + 1
-        
-        if key_error_count[current_key] >= MAX_ERRORS_PER_KEY and len(GEMINI_API_KEYS) > 1:
-            print(f"Key {current_key_index} is invalid, rotating...")
-            rotate_api_key()
-            
+        print(f"Invalid API key: {e}")
         return "Service configuration issue. Please try again later."
         
     except Exception as e:
-        print(f"Unexpected error with key {current_key_index}: {e}")
+        print(f"Unexpected error: {e}")
         return f"Sorry, I encountered an error: {str(e)}"
+
+def generate_visit_plan(user_data):
+    """Generate a personalized visit plan based on user preferences"""
+    SCIENCE_CITY_DATA = load_science_city_data()
+    science_city_context = json.dumps(SCIENCE_CITY_DATA, indent=2)
+    
+    prompt = f"""
+    Create a personalized visit plan for Science City Kolkata based on the user's preferences.
+    
+    SCIENCE CITY INFORMATION:
+    {science_city_context}
+    
+    USER PREFERENCES:
+    - Interests: {user_data.get('interests', 'Not specified')}
+    - Time available: {user_data.get('time_available', 'Not specified')}
+    - Start time: {user_data.get('start_time', 'Not specified')}
+    - With kids: {user_data.get('with_kids', 'Not specified')}
+    - Meal preferences: {user_data.get('meal_preferences', 'Not specified')}
+    
+    Create a detailed itinerary that includes:
+    1. Recommended attractions to visit in order
+    2. Suggested timing for each attraction
+    3. Meal/snack break suggestions based on their preferences
+    4. Estimated time spent at each location
+    5. Any special recommendations based on their interests
+    
+    Make the plan engaging and practical, considering their time constraints.
+    """
+    
+    plan = ask_gemini(prompt)
+    return plan
 
 def get_science_city_answer(question):
     """Get specific answer about Science City or general science answer."""
@@ -198,29 +167,111 @@ def get_science_city_answer(question):
 @app.route('/')
 def index():
     """Render the chatbot page."""
+    # Initialize session
+    session.permanent = True
+    session['conversation_state'] = 'welcome'
+    session['user_data'] = {}
     return render_template('index.html')
 
 @app.route('/ask', methods=['POST'])
 def ask_question():
-    """Handle question asking."""
+    """Handle question asking with conversation flow."""
     data = request.json
     question = data.get('question', '')
+    current_state = session.get('conversation_state', 'welcome')
+    user_data = session.get('user_data', {})
     
     if not question:
         return jsonify({'error': 'No question provided'})
     
-    answer = get_science_city_answer(question)
-    return jsonify({'answer': answer})
+    # Handle conversation flow
+    if current_state == 'welcome':
+        # Welcome message with opening hours and plan trip option
+        SCIENCE_CITY_DATA = load_science_city_data()
+        opening_hours = SCIENCE_CITY_DATA.get('hours', {}).get('Everyday', '10:00 AM - 7:00 PM')
+        
+        response = "🔬 Welcome to Science City Kolkata! 🔬\n\n"
+        response += f"🕐 **Opening Hours:** {opening_hours}\n\n"
+        response += "I can help you with:\n"
+        response += "1. 🗓️ Plan your visit (create personalized itinerary)\n"
+        response += "2. ℹ️ General information about attractions\n"
+        response += "3. 🎫 Ticket pricing information\n"
+        response += "4. 🗺️ Directions and how to reach\n\n"
+        response += "What would you like assistance with today?"
+        session['conversation_state'] = 'main_menu'
+    
+    elif current_state == 'main_menu':
+        # Check if user wants to plan their trip
+        if any(word in question.lower() for word in ['plan', 'itinerary', 'visit', '1', 'one', '🗓️']):
+            session['conversation_state'] = 'asking_interests'
+            response = "Great! Let's plan your visit. What are your main interests? (e.g., space, biology, technology, evolution)"
+        else:
+            # Handle other questions normally
+            response = get_science_city_answer(question)
+            # Stay in main_menu state for follow-up questions
+    
+    elif current_state == 'asking_interests':
+        user_data['interests'] = question
+        session['user_data'] = user_data
+        session['conversation_state'] = 'asking_time'
+        response = "Thanks! How much time do you have available for your visit? (e.g., 2 hours, half day, full day)"
+    
+    elif current_state == 'asking_time':
+        user_data['time_available'] = question
+        session['user_data'] = user_data
+        session['conversation_state'] = 'asking_start_time'
+        response = "What time would you like to start your visit? (e.g., 10:00 AM, 1:00 PM)"
+    
+    elif current_state == 'asking_start_time':
+        user_data['start_time'] = question
+        session['user_data'] = user_data
+        session['conversation_state'] = 'asking_kids'
+        response = "Will you be visiting with children? (yes/no)"
+    
+    elif current_state == 'asking_kids':
+        user_data['with_kids'] = question
+        session['user_data'] = user_data
+        session['conversation_state'] = 'asking_meals'
+        response = "Any food preferences for your meal breaks? (e.g., vegetarian, fast food, cafe snacks)"
+    
+    elif current_state == 'asking_meals':
+        user_data['meal_preferences'] = question
+        session['user_data'] = user_data
+        session['conversation_state'] = 'generating_plan'
+        
+        # Generate the personalized plan
+        plan = generate_visit_plan(user_data)
+        response = f"Perfect! Here's your personalized plan for Science City Kolkata:\n\n{plan}\n\nEnjoy your visit! 🎉"
+        
+        # Reset for next conversation
+        session['conversation_state'] = 'main_menu'
+    
+    else:
+        response = get_science_city_answer(question)
+    
+    return jsonify({'answer': response, 'state': session.get('conversation_state', 'main_menu')})
+
+@app.route('/plan_trip', methods=['POST'])
+def start_trip_planning():
+    """Start the trip planning process"""
+    session['conversation_state'] = 'asking_interests'
+    session['user_data'] = {}
+    return jsonify({'answer': "Great! Let's plan your visit. What are your main interests? (e.g., space, biology, technology, evolution)", 'state': 'asking_interests'})
+
+@app.route('/reset', methods=['POST'])
+def reset_conversation():
+    """Reset the conversation state"""
+    session['conversation_state'] = 'welcome'
+    session['user_data'] = {}
+    return jsonify({'status': 'reset'})
 
 @app.route('/status')
 def api_status():
-    """Endpoint to check API key status"""
+    """Endpoint to check API status"""
     status = {
-        'current_key_index': current_key_index,
-        'key_usage': key_usage_count,
-        'key_errors': key_error_count,
-        'total_keys': len(GEMINI_API_KEYS),
-        'available': len(GEMINI_API_KEYS) > 0
+        'status': 'active' if client else 'inactive',
+        'service': 'Science City Kolkata Assistant',
+        'conversation_state': session.get('conversation_state', 'welcome')
     }
     return jsonify(status)
 
@@ -228,19 +279,6 @@ if __name__ == '__main__':
     # Create necessary directories if they don't exist
     os.makedirs('templates', exist_ok=True)
     os.makedirs('data', exist_ok=True)
-    os.makedirs('config', exist_ok=True)
-    
-    # Create default keys.json if it doesn't exist
-    keys_path = 'config/keys.json'
-    if not os.path.exists(keys_path):
-        default_keys = {
-            "gemini_api_keys": [
-                "AIzaSyC8Jpsr36NM-YEQjLR9sIg3-EYaCskLQJs"
-            ]
-        }
-        with open(keys_path, 'w', encoding='utf-8') as f:
-            json.dump(default_keys, f, indent=2)
-        print(f"Created default config file at {keys_path}. Please update with your actual API keys.")
     
     # Run the Flask app
     app.run(debug=True, host='0.0.0.0', port=5000)
