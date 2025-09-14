@@ -1,14 +1,30 @@
 from flask import Flask, render_template, request, jsonify
 from google import genai
+from google.api_core import exceptions
 import json
 import os
+import time
+
+# Import API keys from external file
+try:
+    from api_keys import GEMINI_API_KEYS
+except ImportError:
+    # Fallback if api_keys.py doesn't exist
+    GEMINI_API_KEYS = ["AIzaSyC8Jpsr36NM-YEQjLR9sIg3-EYaCskLQJs"]
 
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'
 
-# Initialize Gemini API client
-client = genai.Client(api_key="AIzaSyC8Jpsr36NM-YEQjLR9sIg3-EYaCskLQJs")
+# Track current API key index and usage
+current_key_index = 0
+key_usage_count = {key: 0 for key in GEMINI_API_KEYS}
+key_error_count = {key: 0 for key in GEMINI_API_KEYS}
+MAX_ERRORS_PER_KEY = 5  # Switch key after this many errors
+MAX_REQUESTS_PER_KEY = 1000  # Approximate limit before potential quota issues
+
+# Initialize Gemini API client with first key
+client = genai.Client(api_key=GEMINI_API_KEYS[current_key_index])
 
 # Load Science City data from external JSON file
 def load_science_city_data():
@@ -19,34 +35,75 @@ def load_science_city_data():
         # Fallback data if file doesn't exist
         return {
             "name": "Science City Kolkata",
-            "location": "J.B.S Haldane Avenue, Mirania Gardens, East Topsia, Topsia, Kolkata, West Bengal, 700046, India",
-            "hours": {
-                "Everyday": "10:00 AM - 7:00 PM"
-            },
+            "location": "J.B.S Haldane Avenue, Kolkata",
+            "hours": {"Everyday": "10:00 AM - 7:00 PM"},
             "ticket_prices": {
                 "Entry Fee (General)": "₹70.00",
-                "Entry Fee (Organized Group, min 25)": "₹60.00",
-                "Entry Fee (Organized School Groups)": "₹35.00",
-                "Entry Fee (Underprivileged Groups)": "₹5.00"
-            },
-            "attractions": {
-                "space_odyssey": {
-                    "name": "Space Odyssey",
-                    "description": "India's first large format theater with shows about space and astronomy",
-                    "show_times": ["11:00 AM", "1:00 PM", "3:00 PM", "5:00 PM"]
-                }
-            },
-            "facilities": {
-                "parking": "Ample parking is available for both cars and buses"
+                "Entry Fee (Organized School Groups)": "₹35.00"
             }
         }
 
+def rotate_api_key():
+    """Switch to the next available API key"""
+    global current_key_index, client
+    
+    current_key_index = (current_key_index + 1) % len(GEMINI_API_KEYS)
+    new_key = GEMINI_API_KEYS[current_key_index]
+    
+    print(f"Switching to API key index {current_key_index}")
+    client = genai.Client(api_key=new_key)
+    
+    return new_key
+
 def ask_gemini(prompt: str, model="gemini-2.0-flash"):
-    """Send prompt to Gemini and get response."""
+    """Send prompt to Gemini with API key fallback"""
+    global current_key_index, key_usage_count, key_error_count
+    
+    current_key = GEMINI_API_KEYS[current_key_index]
+    key_usage_count[current_key] += 1
+    
+    # Rotate key if we've hit the request limit
+    if key_usage_count[current_key] >= MAX_REQUESTS_PER_KEY:
+        print(f"Key {current_key_index} reached request limit, rotating...")
+        rotate_api_key()
+        current_key = GEMINI_API_KEYS[current_key_index]
+    
     try:
         response = client.models.generate_content(model=model, contents=prompt)
         return response.text
+        
+    except exceptions.ResourceExhausted as e:
+        print(f"Quota exceeded for key {current_key_index}: {e}")
+        key_error_count[current_key] += 1
+        
+        if key_error_count[current_key] >= MAX_ERRORS_PER_KEY:
+            print(f"Key {current_key_index} has too many errors, rotating...")
+            rotate_api_key()
+            
+        return "I'm currently experiencing high demand. Please try again in a moment."
+        
+    except exceptions.PermissionDenied as e:
+        print(f"Permission denied for key {current_key_index}: {e}")
+        key_error_count[current_key] += 1
+        
+        if key_error_count[current_key] >= MAX_ERRORS_PER_KEY:
+            print(f"Key {current_key_index} has permission issues, rotating...")
+            rotate_api_key()
+            
+        return "Service temporarily unavailable. Please try again shortly."
+        
+    except exceptions.InvalidArgument as e:
+        print(f"Invalid API key {current_key_index}: {e}")
+        key_error_count[current_key] += 1
+        
+        if key_error_count[current_key] >= MAX_ERRORS_PER_KEY:
+            print(f"Key {current_key_index} is invalid, rotating...")
+            rotate_api_key()
+            
+        return "Service configuration issue. Please try again later."
+        
     except Exception as e:
+        print(f"Unexpected error with key {current_key_index}: {e}")
         return f"Sorry, I encountered an error: {str(e)}"
 
 def get_science_city_answer(question):
@@ -89,6 +146,17 @@ def ask_question():
     
     answer = get_science_city_answer(question)
     return jsonify({'answer': answer})
+
+@app.route('/status')
+def api_status():
+    """Endpoint to check API key status"""
+    status = {
+        'current_key_index': current_key_index,
+        'key_usage': key_usage_count,
+        'key_errors': key_error_count,
+        'total_keys': len(GEMINI_API_KEYS)
+    }
+    return jsonify(status)
 
 if __name__ == '__main__':
     # Create templates and data directories if they don't exist
