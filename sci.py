@@ -9,15 +9,35 @@ import re
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'
 
-# Fixed API key - replace with your actual key
-GEMINI_API_KEY = "AIzaSyC8Jpsr36NM-YEQjLR9sIg3-EYaCskLQJs"
+# Load API keys from JSON file
+def load_api_keys():
+    try:
+        with open('config/keys.json', 'r', encoding='utf-8') as f:
+            config = json.load(f)
+            return config.get('gemini_api_keys', [])
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"Error loading API keys: {e}")
+        # Fallback to environment variable or single key
+        fallback_key = os.environ.get('GEMINI_API_KEY')
+        if fallback_key:
+            return [fallback_key]
+        return ["AIzaSyC8Jpsr36NM-YEQjLR9sIg3-EYaCskLQJs"]  # Default fallback
 
-# Initialize Gemini API client
-try:
-    client = genai.Client(api_key=GEMINI_API_KEY)
-except Exception as e:
-    print(f"Error initializing Gemini client: {e}")
-    client = None
+# Load API keys
+GEMINI_API_KEYS = load_api_keys()
+
+# Track current API key index and usage
+current_key_index = 0
+key_usage_count = {key: 0 for key in GEMINI_API_KEYS}
+key_error_count = {key: 0 for key in GEMINI_API_KEYS}
+MAX_ERRORS_PER_KEY = 5  # Switch key after this many errors
+MAX_REQUESTS_PER_KEY = 1000  # Approximate limit before potential quota issues
+
+# Initialize Gemini API client with first key
+if GEMINI_API_KEYS:
+    client = genai.Client(api_key=GEMINI_API_KEYS[current_key_index])
+else:
+    raise ValueError("No API keys available. Please check your config/keys.json file.")
 
 # Load Science City data from external JSON file
 def load_science_city_data():
@@ -35,6 +55,21 @@ def load_science_city_data():
                 "Entry Fee (Organized School Groups)": "₹35.00"
             }
         }
+
+def rotate_api_key():
+    """Switch to the next available API key"""
+    global current_key_index, client
+    
+    if len(GEMINI_API_KEYS) <= 1:
+        return GEMINI_API_KEYS[0]  # Only one key available
+    
+    current_key_index = (current_key_index + 1) % len(GEMINI_API_KEYS)
+    new_key = GEMINI_API_KEYS[current_key_index]
+    
+    print(f"Switching to API key index {current_key_index}")
+    client = genai.Client(api_key=new_key)
+    
+    return new_key
 
 def is_science_related(question):
     """Check if the question is related to science"""
@@ -54,28 +89,57 @@ def is_science_related(question):
     return any(keyword in question_lower for keyword in science_keywords)
 
 def ask_gemini(prompt: str, model="gemini-2.0-flash"):
-    """Send prompt to Gemini"""
-    if not client:
-        return "Service is currently unavailable. Please try again later."
+    """Send prompt to Gemini with API key fallback"""
+    global current_key_index, key_usage_count, key_error_count
+    
+    if not GEMINI_API_KEYS:
+        return "API configuration error. Please contact support."
+    
+    current_key = GEMINI_API_KEYS[current_key_index]
+    key_usage_count[current_key] = key_usage_count.get(current_key, 0) + 1
+    
+    # Rotate key if we've hit the request limit
+    if key_usage_count[current_key] >= MAX_REQUESTS_PER_KEY and len(GEMINI_API_KEYS) > 1:
+        print(f"Key {current_key_index} reached request limit, rotating...")
+        rotate_api_key()
+        current_key = GEMINI_API_KEYS[current_key_index]
     
     try:
         response = client.models.generate_content(model=model, contents=prompt)
         return response.text
         
     except exceptions.ResourceExhausted as e:
-        print(f"Quota exceeded: {e}")
+        print(f"Quota exceeded for key {current_key_index}: {e}")
+        key_error_count[current_key] = key_error_count.get(current_key, 0) + 1
+        
+        if key_error_count[current_key] >= MAX_ERRORS_PER_KEY and len(GEMINI_API_KEYS) > 1:
+            print(f"Key {current_key_index} has too many errors, rotating...")
+            rotate_api_key()
+            
         return "I'm currently experiencing high demand. Please try again in a moment."
         
     except exceptions.PermissionDenied as e:
-        print(f"Permission denied: {e}")
+        print(f"Permission denied for key {current_key_index}: {e}")
+        key_error_count[current_key] = key_error_count.get(current_key, 0) + 1
+        
+        if key_error_count[current_key] >= MAX_ERRORS_PER_KEY and len(GEMINI_API_KEYS) > 1:
+            print(f"Key {current_key_index} has permission issues, rotating...")
+            rotate_api_key()
+            
         return "Service temporarily unavailable. Please try again shortly."
         
     except exceptions.InvalidArgument as e:
-        print(f"Invalid API key: {e}")
+        print(f"Invalid API key {current_key_index}: {e}")
+        key_error_count[current_key] = key_error_count.get(current_key, 0) + 1
+        
+        if key_error_count[current_key] >= MAX_ERRORS_PER_KEY and len(GEMINI_API_KEYS) > 1:
+            print(f"Key {current_key_index} is invalid, rotating...")
+            rotate_api_key()
+            
         return "Service configuration issue. Please try again later."
         
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        print(f"Unexpected error with key {current_key_index}: {e}")
         return f"Sorry, I encountered an error: {str(e)}"
 
 def get_science_city_answer(question):
@@ -150,10 +214,13 @@ def ask_question():
 
 @app.route('/status')
 def api_status():
-    """Endpoint to check API status"""
+    """Endpoint to check API key status"""
     status = {
-        'status': 'active' if client else 'inactive',
-        'service': 'Science City Kolkata Assistant'
+        'current_key_index': current_key_index,
+        'key_usage': key_usage_count,
+        'key_errors': key_error_count,
+        'total_keys': len(GEMINI_API_KEYS),
+        'available': len(GEMINI_API_KEYS) > 0
     }
     return jsonify(status)
 
@@ -161,6 +228,19 @@ if __name__ == '__main__':
     # Create necessary directories if they don't exist
     os.makedirs('templates', exist_ok=True)
     os.makedirs('data', exist_ok=True)
+    os.makedirs('config', exist_ok=True)
+    
+    # Create default keys.json if it doesn't exist
+    keys_path = 'config/keys.json'
+    if not os.path.exists(keys_path):
+        default_keys = {
+            "gemini_api_keys": [
+                "AIzaSyC8Jpsr36NM-YEQjLR9sIg3-EYaCskLQJs"
+            ]
+        }
+        with open(keys_path, 'w', encoding='utf-8') as f:
+            json.dump(default_keys, f, indent=2)
+        print(f"Created default config file at {keys_path}. Please update with your actual API keys.")
     
     # Run the Flask app
     app.run(debug=True, host='0.0.0.0', port=5000)
