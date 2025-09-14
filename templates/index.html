@@ -57,6 +57,38 @@
             font-weight: 600;
         }
         
+        .header-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+        
+        .opening-hours {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 4px;
+        }
+        
+        .plan-trip-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 4px 10px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .plan-trip-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
         .chatbot-messages {
             flex: 1;
             padding: 16px;
@@ -208,6 +240,13 @@
             color: white;
         }
         
+        .plan-trip-suggestion {
+            background: #4a69bd;
+            color: white;
+            border: 1px solid #4a69bd;
+            font-weight: 600;
+        }
+        
         /* Mobile-specific styles */
         @media (max-width: 480px) {
             .chatbot-header {
@@ -216,6 +255,15 @@
             
             .chatbot-header h1 {
                 font-size: 18px;
+            }
+            
+            .header-info {
+                font-size: 11px;
+            }
+            
+            .plan-trip-btn {
+                font-size: 10px;
+                padding: 3px 8px;
             }
             
             .chatbot-messages {
@@ -259,6 +307,10 @@
                 font-size: 16px;
             }
             
+            .header-info {
+                font-size: 10px;
+            }
+            
             .message {
                 font-size: 14px;
             }
@@ -270,7 +322,7 @@
         }
         
         /* Prevent text selection on interactive elements */
-        .suggestion-btn, #chatbot-send-btn {
+        .suggestion-btn, #chatbot-send-btn, .plan-trip-btn {
             user-select: none;
             -webkit-user-select: none;
         }
@@ -290,16 +342,23 @@
     <!-- Chatbot Container -->
     <div class="chatbot-container">
         <div class="chatbot-header">
-            <h1>🔬 Science City Kolkata Assistant</h1>
+            <h1>🔬 Science City Kolkata</h1>
+            <div class="header-info">
+                <div class="opening-hours">
+                    <span>🕐 10:00 AM - 7:00 PM</span>
+                </div>
+                <button class="plan-trip-btn" onclick="startTripPlanning()">
+                    <span>🗓️</span> Plan Trip
+                </button>
+            </div>
         </div>
         
         <div class="suggested-questions">
-            <button class="suggestion-btn" onclick="setQuestion('What are the opening hours?')">Opening Hours</button>
-            <button class="suggestion-btn" onclick="setQuestion('What are the ticket prices?')">Ticket Prices</button>
-            <button class="suggestion-btn" onclick="setQuestion('Where is the space theater?')">Space Theater</button>
-            <button class="suggestion-btn" onclick="setQuestion('Is there parking available?')">Parking Info</button>
-            <button class="suggestion-btn" onclick="setQuestion('What are the main attractions?')">Attractions</button>
-            <button class="suggestion-btn" onclick="setQuestion('How do I get there?')">Directions</button>
+            <button class="suggestion-btn plan-trip-suggestion" onclick="startTripPlanning()">🗓️ Plan My Visit</button>
+            <button class="suggestion-btn" onclick="setQuestion('What are the opening hours?')">🕐 Opening Hours</button>
+            <button class="suggestion-btn" onclick="setQuestion('What are the ticket prices?')">🎫 Ticket Prices</button>
+            <button class="suggestion-btn" onclick="setQuestion('What are the main attractions?')">🔭 Attractions</button>
+            <button class="suggestion-btn" onclick="setQuestion('How do I get there?')">🗺️ Directions</button>
         </div>
         
         <div class="chatbot-messages">
@@ -334,7 +393,10 @@
                 const messageDiv = document.createElement('div');
                 messageDiv.classList.add('message');
                 messageDiv.classList.add(isUser ? 'user-message' : 'bot-message');
-                messageDiv.textContent = text;
+                
+                // Preserve line breaks in the message
+                messageDiv.innerHTML = text.replace(/\n/g, '<br>');
+                
                 messagesContainer.appendChild(messageDiv);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
@@ -397,6 +459,12 @@
                 }
             }
             
+            // Start trip planning
+            window.startTripPlanning = function() {
+                inputField.value = "Plan my trip";
+                sendMessage();
+            }
+            
             // Set question from suggestion
             window.setQuestion = function(question) {
                 inputField.value = question;
@@ -416,7 +484,7 @@
             // Add welcome message after a short delay
             setTimeout(() => {
                 removeTypingIndicator();
-                addMessage("Hello! I'm your Science City Kolkata assistant. I can help you with information about opening hours, ticket prices, attractions, and more. How can I help you today?");
+                addMessage("🔬 Welcome to Science City Kolkata! 🔬\n\n🕐 Opening Hours: 10:00 AM - 7:00 PM\n\nI can help you with:\n1. 🗓️ Plan your visit (create personalized itinerary)\n2. ℹ️ General information about attractions\n3. 🎫 Ticket pricing information\n4. 🗺️ Directions and how to reach\n\nWhat would you like assistance with today?");
             }, 1000);
             
             // Focus input field on load for better mobile UX
