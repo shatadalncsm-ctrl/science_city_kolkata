@@ -3,7 +3,7 @@ from google import genai
 from google.api_core import exceptions
 import json
 import os
-import time
+import re
 
 # Import API keys from external file
 try:
@@ -54,6 +54,23 @@ def rotate_api_key():
     client = genai.Client(api_key=new_key)
     
     return new_key
+
+def is_science_related(question):
+    """Check if the question is related to science"""
+    science_keywords = [
+        'science', 'physics', 'chemistry', 'biology', 'astronomy', 'space',
+        'technology', 'math', 'mathematics', 'engineering', 'experiment',
+        'research', 'discovery', 'invention', 'scientist', 'theory',
+        'evolution', 'planet', 'star', 'galaxy', 'atom', 'molecule',
+        'cell', 'dna', 'genetic', 'energy', 'force', 'motion', 'electric',
+        'magnet', 'light', 'sound', 'heat', 'temperature', 'climate',
+        'environment', 'ecology', 'geology', 'volcano', 'earthquake',
+        'computer', 'robot', 'ai', 'artificial intelligence', 'machine',
+        'laboratory', 'microscope', 'telescope', 'observatory'
+    ]
+    
+    question_lower = question.lower()
+    return any(keyword in question_lower for keyword in science_keywords)
 
 def ask_gemini(prompt: str, model="gemini-2.0-flash"):
     """Send prompt to Gemini with API key fallback"""
@@ -107,25 +124,54 @@ def ask_gemini(prompt: str, model="gemini-2.0-flash"):
         return f"Sorry, I encountered an error: {str(e)}"
 
 def get_science_city_answer(question):
-    """Get specific answer about Science City."""
+    """Get specific answer about Science City or general science answer."""
     SCIENCE_CITY_DATA = load_science_city_data()
     science_city_context = json.dumps(SCIENCE_CITY_DATA, indent=2)
     
-    prompt = f"""
-    You are a knowledgeable guide at Science City Kolkata. 
-    Answer the following question based ONLY on the Science City information provided.
+    # Check if question is specifically about Science City Kolkata
+    science_city_keywords = [
+        'science city', 'kolkata', 'opening', 'hour', 'time', 'ticket', 'price',
+        'cost', 'fee', 'attraction', 'exhibit', 'show', 'theater', 'parking',
+        'location', 'address', 'how to reach', 'direction', 'facility', 'amenity',
+        'restaurant', 'food', 'cafe', 'shop', 'store', 'gift', 'souvenir'
+    ]
     
-    SCIENCE CITY INFORMATION:
-    {science_city_context}
+    question_lower = question.lower()
+    is_science_city_question = any(keyword in question_lower for keyword in science_city_keywords)
     
-    QUESTION: {question}
-    
-    Instructions:
-    1. Be direct, concise and factual
-    2. Provide specific location details if applicable
-    3. If information is not available, say "I don't have that information"
-    4. Keep response under 3 sentences
-    """
+    if is_science_city_question:
+        # Answer based on Science City data
+        prompt = f"""
+        You are a knowledgeable guide at Science City Kolkata. 
+        Answer the following question based ONLY on the Science City information provided.
+        
+        SCIENCE CITY INFORMATION:
+        {science_city_context}
+        
+        QUESTION: {question}
+        
+        Instructions:
+        1. Be direct, concise and factual
+        2. Provide specific location details if applicable
+        3. If information is not available, say "I don't have that information"
+        4. Keep response under 3 sentences
+        """
+    elif is_science_related(question):
+        # Answer general science questions
+        prompt = f"""
+        You are a helpful science educator. Answer the following science question:
+        
+        QUESTION: {question}
+        
+        Instructions:
+        1. Provide accurate, educational information
+        2. Explain concepts clearly and simply
+        3. Keep response concise but informative
+        4. If you don't know the answer, say so
+        """
+    else:
+        # For non-science questions
+        return "I'm specialized in Science City Kolkata and general science topics. I'd be happy to help with questions about Science City, its exhibits, or any science-related topics!"
     
     answer = ask_gemini(prompt)
     return answer
